@@ -16,15 +16,35 @@ namespace Demo_WebAPI_Weather.BusinessLayer
         /// <param name="lon">longitude</param>
         /// <param name="lat">latitude</param>
         /// <returns>weather data</returns>
-        public WeatherData GetWeatherByLonLat(double lon, double lat)
+        public WeatherData GetWeatherByLonLat(LocationCoordinates locationCoordinates)
         {
             var restClient = new RestClient();
             restClient.BaseUrl = new Uri(ApiAccess.OPEN_WEATHER_MAP_BASE_URL);
 
             var request = new RestRequest("weather", Method.GET);
             request.AddParameter("appid", ApiAccess.OPEN_WEATHER_MAP_KEY);
-            request.AddParameter("lon", lon);
-            request.AddParameter("lat", lat);
+            request.AddParameter("lon", locationCoordinates.Longitude);
+            request.AddParameter("lat", locationCoordinates.Latitude);
+
+            RestApiClientSync syncRestClient = new RestApiClientSync();
+            WeatherData weatherData = syncRestClient.ExecuteRequest(restClient, request);
+
+            return weatherData;
+        }
+
+        /// <summary>
+        /// get weather data using zip code
+        /// </summary>
+        /// <param name="zipCode">zip code</param>
+        /// <returns>weather data</returns>
+        public WeatherData GetWeatherByZipCode(int zipCode)
+        {
+            var restClient = new RestClient();
+            restClient.BaseUrl = new Uri(ApiAccess.OPEN_WEATHER_MAP_BASE_URL);
+
+            var request = new RestRequest("weather", Method.GET);
+            request.AddParameter("appid", ApiAccess.OPEN_WEATHER_MAP_KEY);
+            request.AddParameter("zip", zipCode);
 
             RestApiClientSync syncRestClient = new RestApiClientSync();
             WeatherData weatherData = syncRestClient.ExecuteRequest(restClient, request);

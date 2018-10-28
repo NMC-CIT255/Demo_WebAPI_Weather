@@ -6,20 +6,21 @@ using System.Threading.Tasks;
 using Demo_WebAPI_Weather.ConsoleUtilities;
 using Demo_WebAPI_Weather.DataAccessLayer;
 using Demo_WebAPI_Weather.BusinessLayer;
+using Demo_WebAPI_Weather.Models;
 using RestSharp;
 
 namespace Demo_WebAPI_Weather.PresentationLayer
 {
     class Presenter
     {
+        enum LocationDesignationMethod { None, LongitudeLatitude, ZipCode }
+
         BusinessLogic _businessLogic;
         IRestApiClient _restApiClient;
-        WeatherData _weatherData;
 
         public Presenter(BusinessLogic businessLogic)
         {
             _businessLogic = businessLogic;
-            InitializeConsoleWindow();
             RunApplicationLoop();
         }
 
@@ -33,17 +34,20 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         private void DisplayMainMenu()
         {
             bool runApp = true;
+            WeatherData _weatherData = null;
+            LocationInformation _locationInformation = null;
+            LocationDesignationMethod locationDesignationMethod = LocationDesignationMethod.None;
+
+            InitializeApplicationWindow();
 
             do
             {
                 DisplayHeader("\t\tMain Menu");
                 Console.WriteLine("");
                 Console.WriteLine("\tA. Choose Rest API Client");
-                Console.WriteLine("\tB. Get Weather by Longitude and Latitude");
-                Console.WriteLine("\tC. ");
-                Console.WriteLine("\tD. ");
-                Console.WriteLine("\tE. ");
-                Console.WriteLine("\tF. ");
+                Console.WriteLine("\tB. Get Weather Data by Longitude and Latitude");
+                Console.WriteLine("\tC. Get Weather Data by Zip Code");
+                Console.WriteLine("\tD. Display Weather Data Short Format");
                 Console.WriteLine("\tQ. Quit");
                 Console.WriteLine();
                 Console.Write("\tEnter Menu Choice:");
@@ -53,19 +57,15 @@ namespace Demo_WebAPI_Weather.PresentationLayer
                         _restApiClient = DisplayChooseRestApiClient();
                         break;
                     case "b":
-                        _weatherData = DisplayGetWeatherByLonLat();
+                        _weatherData = DisplayGetWeatherByLonLat(out _locationInformation);
+                        locationDesignationMethod = LocationDesignationMethod.LongitudeLatitude;
                         break;
                     case "c":
-
+                        _weatherData = DisplayGetWeatherByZipCode(out _locationInformation);
+                        locationDesignationMethod = LocationDesignationMethod.ZipCode;
                         break;
                     case "d":
-
-                        break;
-                    case "e":
-
-                        break;
-                    case "f":
-
+                        DisplayWeatherDataShortFormat(_weatherData, _locationInformation, locationDesignationMethod);
                         break;
                     case "q":
                         runApp = false;
@@ -80,59 +80,118 @@ namespace Demo_WebAPI_Weather.PresentationLayer
 
         }
 
-        private WeatherData DisplayGetWeatherByLonLat()
+        /// <summary>
+        /// display get the weather data by longitude and latitude
+        /// </summary>
+        /// <returns>weather data</returns>
+        private WeatherData DisplayGetWeatherByLonLat(out LocationInformation locationInformation)
         {
             WeatherData weatherData;
             double lon, lat;
 
+            locationInformation = new LocationInformation();
+
             DisplayHeader("Weather by Longitude and latitude");
 
+            //
+            // get longitude and latitude from user
+            //
             do
             {
-                Console.Write("Enter Longitude:");
+                Console.Write("\tEnter Longitude:");
             } while (!double.TryParse(Console.ReadLine(), out lon));
             do
             {
-                Console.Write("Enter latitude:");
+                Console.Write("\tEnter latitude:");
             } while (!double.TryParse(Console.ReadLine(), out lat));
             
-            weatherData = _businessLogic.GetWeatherByLonLat(lon, lat);
+            //
+            // acquire weather data from Open Weather Map
+            //
+            weatherData = _businessLogic.GetWeatherByLonLat(new LocationCoordinates() { Longitude = lon, Latitude = lat });
 
-            Console.WriteLine($"Weather data for Longitude:{lon:0.##} and Latitude:{lat:0.##} acquired.");
+            //
+            // update LocationInformation object
+            //
+            locationInformation.LocationCoordinates = new LocationCoordinates(){ Longitude = lon, Latitude = lat };
+            locationInformation.Name = weatherData.Name;
+            locationInformation.ZipCode = 0;
+
+            Console.WriteLine($"\tWeather data for Longitude:{lon:0.##} and Latitude:{lat:0.##} acquired.");
 
             DisplayContinuePrompt();
 
             return weatherData;
         }
 
-        private WeatherData DisplayGetWeatherByZipCode()
+        /// <summary>
+        /// display get the weather data by zip code
+        /// </summary>
+        /// <returns>weather data</returns>
+        private WeatherData DisplayGetWeatherByZipCode(out LocationInformation locationInformation)
         {
             WeatherData weatherData;
             int zipCode;
 
+            locationInformation = new LocationInformation();
+
             DisplayHeader("Weather by Zip Code");
 
+            //
+            // get zip code from user
+            //
             do
             {
-                Console.Write("Enter Zip Code:");
+                Console.Write("\tEnter Zip Code:");
             } while (!int.TryParse(Console.ReadLine(), out zipCode));
 
+            //
+            // acquire weather data from Open Weather Map
+            //
             weatherData = _businessLogic.GetWeatherByZipCode(zipCode);
 
-            Console.WriteLine($"Weather data for Zip Code:{zipCode} acquired.");
+            //
+            // update LocationInformation object
+            //
+            locationInformation.ZipCode = zipCode;
+            locationInformation.Name = weatherData.Name;
+            locationInformation.LocationCoordinates = new LocationCoordinates() { Longitude = weatherData.Coord.Lon, Latitude = weatherData.Coord.Lat };
+
+            Console.WriteLine($"\tWeather data for Zip Code:{zipCode} acquired.");
 
             DisplayContinuePrompt();
 
             return weatherData;
         }
 
+        private void DisplayWeatherDataShortFormat(WeatherData weatherData, LocationInformation locationInformation, LocationDesignationMethod locationDesignationMethod)
+        {
+            DisplayHeader("Current Weather Data");
+
+            Console.WriteLine($"\tWeather Data for {locationInformation.Name}");
+            if (locationInformation.ZipCode != 0 ) Console.WriteLine("\tZip Code:" + locationInformation.ZipCode);
+            Console.WriteLine($"\tLongitude: {locationInformation.LocationCoordinates.Longitude:0.##}");
+            Console.WriteLine($"\tLatitude: {locationInformation.LocationCoordinates.Latitude:0.##}");
+            Console.WriteLine();
+
+            Console.WriteLine($"\tTemperature: {ConvertToFahrenheit(weatherData.Main.Temp):0.#}°F");
+            Console.WriteLine($"\tHumidity: {weatherData.Main.Humidity:0.}%");
+            Console.WriteLine($"\tWind: {ConvertToMilesPerHour(weatherData.Wind.Speed):0.#}m/h {ConvertDegreesToCardinalDirection(weatherData.Wind.Deg)}");
+
+            DisplayContinuePrompt();
+        }
+
+        /// <summary>
+        /// choose the Rest API client
+        /// </summary>
+        /// <returns>Rest API client</returns>
         private IRestApiClient DisplayChooseRestApiClient()
         {
             IRestApiClient restApiClient = null;
 
             DisplayHeader("Choose Rest API Client");
 
-            Console.WriteLine("Choosing Sync Client");
+            Console.WriteLine("\tChoosing Sync Client");
             restApiClient = new RestApiClientSync();
 
             DisplayContinuePrompt();
@@ -141,40 +200,17 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         }
 
 
-        //static WeatherData GetWeatherByLonLat()
-        //{
-        //    var restClient = new RestClient();
-        //    restClient.BaseUrl = new Uri(ApiAccess.OPEN_WEATHER_MAP_KEY);
-
-        //    var request = new RestRequest("weather", Method.GET);
-        //    request.AddParameter("appid", "864d252afc928abff4010abe732617a1");
-        //    request.AddParameter("lon", "-86");
-        //    request.AddParameter("lat", "45");
-
-        //    RestApiClientSync syncRestClient = new RestApiClientSync();
-        //    WeatherData weatherData = syncRestClient.ExecuteRequest(restClient, request);
-
-        //    return weatherData;
-        //}
-
-        /// <summary>
-        /// initialize console configuration
-        /// </summary>
-        private void InitializeConsoleWindow()
-        {
-            Console.ForegroundColor = ConsoleTheme.WindowForegroundColor;
-            Console.BackgroundColor = ConsoleTheme.WindowBackgroundColor;
-        }
 
         /// <summary>
         /// Display the Closing Screen
         /// </summary>
         static void DisplayClosingScreen()
         {
+            InitializeWelcomeClosingWindow();
+
             Console.Clear();
             Console.WriteLine();
             Console.WriteLine("\tDemo Provided by NMC CIT Department");
-
 
             DisplayContinuePrompt();
         }
@@ -184,6 +220,8 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         /// </summary>
         static void DisplayWelcomeScreen()
         {
+            InitializeWelcomeClosingWindow();
+
             Console.Clear();
             Console.WriteLine();
             Console.WriteLine("\tWeather Web API Demo");
@@ -195,6 +233,24 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         #region HEDPER METHODS
 
         /// <summary>
+        /// initialize application screen configuration
+        /// </summary>
+        static void InitializeApplicationWindow()
+        {
+            Console.ForegroundColor = ConsoleTheme.ApplicationForegroundColor;
+            Console.BackgroundColor = ConsoleTheme.ApplicationBackgroundColor;
+        }
+
+        /// <summary>
+        /// initialize welcome and closing screen configuration
+        /// </summary>
+        static void InitializeWelcomeClosingWindow()
+        {
+            Console.ForegroundColor = ConsoleTheme.WelcomeClosingScreenForegroundColor;
+            Console.BackgroundColor = ConsoleTheme.WelcomeClosingScreenBackgroundColor;
+        }
+
+        /// <summary>
         /// display a screen header
         /// </summary>
         /// <param name="headerText">header content</param>
@@ -202,7 +258,7 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         {
             Console.Clear();
             Console.WriteLine();
-            Console.WriteLine(headerText);
+            Console.WriteLine("\t\t" + headerText);
             Console.WriteLine();
         }
 
@@ -211,9 +267,42 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         /// </summary>
         static void DisplayContinuePrompt()
         {
+            Console.CursorVisible = false;
             Console.WriteLine();
             Console.WriteLine("\tPress any key to continue.");
             Console.ReadKey();
+            Console.CursorVisible = true;
+        }
+
+        /// <summary>
+        /// convert Kalvin to Fahrenheit
+        /// </summary>
+        /// <param name="degreesKalvin"></param>
+        /// <returns>degrees Fahrenheit</returns>
+        static double ConvertToFahrenheit(double degreesKalvin)
+        {
+            return (degreesKalvin - 273.15) * 1.8 + 32;
+        }
+
+        /// <summary>
+        /// convert meter/second to miles/hour
+        /// </summary>
+        /// <param name="speedMetersPerSecond"></param>
+        /// <returns>miles per hour</returns>
+        static double ConvertToMilesPerHour(double speedMetersPerSecond)
+        {
+            return speedMetersPerSecond * (3600 / 1609);   
+        }
+
+        /// <summary>
+        /// convert directions in degrees to cardinal directions
+        /// </summary>
+        /// <param name="degrees">directions in degrees</param>
+        /// <returns>cardinal directions</returns>
+        static string ConvertDegreesToCardinalDirection(double degrees)
+        {
+            string[] caridnalDirections = { "N", "NE", "E", "SE", "S", "SW", "W", "NW", "N" };
+            return caridnalDirections[(int)Math.Round(((double)degrees % 360) / 45)];
         }
 
         #endregion
