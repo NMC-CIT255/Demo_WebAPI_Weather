@@ -44,34 +44,30 @@ namespace Demo_WebAPI_Weather.PresentationLayer
             {
                 DisplayHeader("\t\tMain Menu");
                 Console.WriteLine("");
-                Console.WriteLine("\tA. Choose Rest API Client");
-                Console.WriteLine("\tB. Get Weather Data by Longitude and Latitude");
-                Console.WriteLine("\tC. Get Weather Data by Zip Code");
-                Console.WriteLine("\tD. Display Weather Data Short Format");
+                Console.WriteLine("\tA. Get Weather Data by Longitude and Latitude");
+                Console.WriteLine("\tB. Get Weather Data by Zip Code");
+                Console.WriteLine("\tC. Display Weather Data Short Format");
                 Console.WriteLine("\tQ. Quit");
                 Console.WriteLine();
                 Console.Write("\tEnter Menu Choice:");
                 switch (Console.ReadLine().ToLower())
                 {
                     case "a":
-                        _restApiClient = DisplayChooseRestApiClient();
-                        break;
-                    case "b":
                         _weatherData = DisplayGetWeatherByLonLat(out _locationInformation);
                         locationDesignationMethod = LocationDesignationMethod.LongitudeLatitude;
                         break;
-                    case "c":
+                    case "b":
                         _weatherData = DisplayGetWeatherByZipCode(out _locationInformation);
                         locationDesignationMethod = LocationDesignationMethod.ZipCode;
                         break;
-                    case "d":
+                    case "c":
                         DisplayWeatherDataShortFormat(_weatherData, _locationInformation, locationDesignationMethod);
                         break;
                     case "q":
                         runApp = false;
                         break;
                     default:
-                        Console.WriteLine("Please make a selection A-F or Q.");
+                        Console.WriteLine("Please make a selection A-C or Q.");
                         DisplayContinuePrompt();
                         break;
                 }
@@ -174,31 +170,12 @@ namespace Demo_WebAPI_Weather.PresentationLayer
             Console.WriteLine($"\tLatitude: {locationInformation.LocationCoordinates.Latitude:0.##}");
             Console.WriteLine();
 
-            Console.WriteLine($"\tTemperature: {ConvertToFahrenheit(weatherData.Main.Temp):0.#}°F");
+            Console.WriteLine($"\tTemperature: {DisplayFahrenheit(weatherData.Main.Temp)}");
             Console.WriteLine($"\tHumidity: {weatherData.Main.Humidity:0.}%");
-            Console.WriteLine($"\tWind: {ConvertToMilesPerHour(weatherData.Wind.Speed):0.#}m/h {ConvertDegreesToCardinalDirection(weatherData.Wind.Deg)}");
+            Console.WriteLine($"\tWind: {DisplayMilesPerHour(weatherData.Wind.Speed)} {DisplayCardinalDirection(weatherData.Wind.Deg)}");
 
             DisplayContinuePrompt();
         }
-
-        /// <summary>
-        /// choose the Rest API client
-        /// </summary>
-        /// <returns>Rest API client</returns>
-        private IRestApiClient DisplayChooseRestApiClient()
-        {
-            IRestApiClient restApiClient = null;
-
-            DisplayHeader("Choose Rest API Client");
-
-            Console.WriteLine("\tChoosing Sync Client");
-            restApiClient = new RestApiClientSync();
-
-            DisplayContinuePrompt();
-
-            return restApiClient;
-        }
-
 
 
         /// <summary>
@@ -279,9 +256,9 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         /// </summary>
         /// <param name="degreesKalvin"></param>
         /// <returns>degrees Fahrenheit</returns>
-        static double ConvertToFahrenheit(double degreesKalvin)
+        static string DisplayFahrenheit(double degreesKalvin)
         {
-            return (degreesKalvin - 273.15) * 1.8 + 32;
+            return ((degreesKalvin - 273.15) * 1.8 + 32) + "\u00B0F";
         }
 
         /// <summary>
@@ -289,9 +266,9 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         /// </summary>
         /// <param name="speedMetersPerSecond"></param>
         /// <returns>miles per hour</returns>
-        static double ConvertToMilesPerHour(double speedMetersPerSecond)
+        static string DisplayMilesPerHour(double speedMetersPerSecond)
         {
-            return speedMetersPerSecond * (3600 / 1609);   
+            return speedMetersPerSecond * (3600 / 1609) + "mph";   
         }
 
         /// <summary>
@@ -299,10 +276,10 @@ namespace Demo_WebAPI_Weather.PresentationLayer
         /// </summary>
         /// <param name="degrees">directions in degrees</param>
         /// <returns>cardinal directions</returns>
-        static string ConvertDegreesToCardinalDirection(double degrees)
+        static string DisplayCardinalDirection(double degrees)
         {
             string[] caridnalDirections = { "N", "NE", "E", "SE", "S", "SW", "W", "NW", "N" };
-            return caridnalDirections[(int)Math.Round(((double)degrees % 360) / 45)];
+            return $"{degrees:0}\u00B0" + caridnalDirections[(int)Math.Round(((double)degrees % 360) / 45)];
         }
 
         #endregion

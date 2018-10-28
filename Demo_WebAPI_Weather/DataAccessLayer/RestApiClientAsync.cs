@@ -10,17 +10,17 @@ namespace Demo_WebAPI_Weather.DataAccessLayer
 {
     class RestApiClientAsync
     {
-        public WeatherData RestClientGet()
+        public async Task<WeatherData> ExecuteRequest(RestClient restClient, IRestRequest request)
         {
             WeatherData weatherData = null;
 
-            var client = new RestClient();
-            client.BaseUrl = new Uri("http://api.openweathermap.org/data/2.5/");
+            //var client = new RestClient();
+            //client.BaseUrl = new Uri("http://api.openweathermap.org/data/2.5/");
 
-            var request = new RestRequest("weather", Method.GET);
-            request.AddParameter("appid", "864d252afc928abff4010abe732617a1");
-            request.AddParameter("lon", "-86");
-            request.AddParameter("lat", "45");
+            //var request = new RestRequest("weather", Method.GET);
+            //request.AddParameter("appid", "864d252afc928abff4010abe732617a1");
+            //request.AddParameter("lon", "-86");
+            //request.AddParameter("lat", "45");
 
             //
             // execute the request synchronously
@@ -29,13 +29,13 @@ namespace Demo_WebAPI_Weather.DataAccessLayer
             //var content = response.Content; // raw content as string
             //weatherData = JsonConvert.DeserializeObject<WeatherData>(content);
 
-            var asyncHandler = client.ExecuteAsync<WeatherData>(request, r =>
-            {
-                if (r.ResponseStatus == ResponseStatus.Completed)
-                {
-                    weatherData = r.Data;
-                }
-            });
+            //var asyncHandler = restClient.ExecuteAsync<WeatherData>(request, r =>
+            //{
+            //    if (r.ResponseStatus == ResponseStatus.Completed)
+            //    {
+            //        weatherData = r.Data;
+            //    }
+            //});
 
             // or automatically deserialize result
             // return content type is sniffed but can be explicitly set via RestClient.AddHandler();
@@ -48,7 +48,10 @@ namespace Demo_WebAPI_Weather.DataAccessLayer
             //    Console.WriteLine(response.Content);
             //});
 
-
+            var asyncHandle = restClient.ExecuteAsync(request, response =>
+            {
+                Console.WriteLine(response.Content);
+            });
 
             //IRestResponse response = client.ExecuteAsync(request, ;
 
