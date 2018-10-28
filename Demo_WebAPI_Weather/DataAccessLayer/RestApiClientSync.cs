@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace Demo_WebAPI_Weather.DataAccessLayer
 {
-    public class RestApiClientSync
+    public class RestApiClientSync : IRestApiClient
     {
         public WeatherData ExecuteRequest(RestClient restClient, IRestRequest request)
         {
